@@ -1,15 +1,23 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CqrsModule } from '@nestjs/cqrs';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { Inventory } from './entities/inventory.entity';
-import { InventoryGrpcService } from './services/inventory.grpc.service';
 import { InventoryController } from './controllers/inventory.controller';
 import { InventoryService } from './services/inventory.service';
-import { join } from 'path';
 import { InventoryGrpcController } from './grpc/controllers/inventory.grpc.controller';
+
+// CQRS Handlers
+import { ReduceStockHandler } from './cqrs/handlers/reduce-stock.handler';
+import { GetStockHandler } from './cqrs/handlers/get-stock.handler';
+import { CreateInventoryHandler } from './cqrs/handlers/create-inventory.handler';
+
+const CommandHandlers = [ReduceStockHandler, CreateInventoryHandler];
+const QueryHandlers = [GetStockHandler];
 
 @Module({
   imports: [
+    CqrsModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -29,14 +37,8 @@ import { InventoryGrpcController } from './grpc/controllers/inventory.grpc.contr
   controllers: [InventoryController, InventoryGrpcController],
   providers: [
     InventoryService,
-    {
-      provide: 'INVENTORY_PACKAGE',
-      useValue: {
-        package: 'inventory',
-        protoPath: join(__dirname, '../protos/inventory.proto'),
-      },
-    },
-    InventoryGrpcService,
+    ...CommandHandlers,
+    ...QueryHandlers,
   ],
 })
 export class AppModule {}

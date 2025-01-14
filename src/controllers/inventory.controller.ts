@@ -1,13 +1,19 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { InventoryService } from '../services/inventory.service';
+import { CommandBus } from '@nestjs/cqrs';
+import { CreateInventoryCommand } from '../cqrs/commands/create-inventory.command';
 import { CreateInventoryDto } from '../dto/create-inventory.dto';
 
 @Controller('inventory')
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(private readonly commandBus: CommandBus) {}
 
   @Post()
-  create(@Body() createInventoryDto: CreateInventoryDto) {
-    return this.inventoryService.create(createInventoryDto);
+  async create(@Body() createInventoryDto: CreateInventoryDto) {
+    return this.commandBus.execute(
+      new CreateInventoryCommand(
+        createInventoryDto.productId,
+        createInventoryDto.stock
+      )
+    );
   }
 }
